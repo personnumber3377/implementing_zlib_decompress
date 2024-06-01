@@ -169,8 +169,8 @@ def main() -> int: # Main function
 
 	#compressed_data = zlib.compress(bytes(input_string, encoding="ascii"), level=0)
 
-	compressed_data = zlib.compress(bytes(input_string, encoding="ascii"))
-
+	#compressed_data = zlib.compress(bytes(input_string, encoding="ascii"))
+	compressed_data = b'x\x9c\xed\xd61\n\x800\x0cF\xe1\'dhO\xa1\xf7?U\x04\x8f!\xc4\xdd\xc5Ex\x1dR\xe8P(\xfc\x1fM(\xd9\x8a\x010^{~\x9c\xff\xba3\x83\x1du\x05G\x03\xca\x06\xa8\xf9\rX\xa0\x07N5\x1e"}\x80\\\x82T\xe3\x1b\xb0B\x0f\\\xdc.\x00y \x88\x92\xff\xe2\xa0\x016\xa0{@\x07\x94<\x10\x04\xd9\x00\x19P6@\x7f\x01\x1b\xf0\x00R \x1a\x9c' # This is the data from the PNG file for now.
 	print(compressed_data)
 
 	# Try to use our decompressing function on the compressed input.
@@ -181,13 +181,15 @@ def main() -> int: # Main function
 
 	# Decode the result to ascii. It should be the same as the original string.
 
-	out_as_string = result.decode("ascii")
+	print("Here is the resulting binary data after decompressing: "+str(result)) # Print the result to the user.
 
-	print("Here is the decompressed output: "+str(out_as_string))
+	#out_as_string = result.decode("ascii")
+
+	#print("Here is the decompressed output: "+str(out_as_string))
 
 
 	# Sanity check.
-	assert input_string == out_as_string
+	#assert input_string == out_as_string
 
 	return 0
 

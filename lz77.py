@@ -55,7 +55,9 @@ However, the DEFLATE spec adds yet another twist. Rather than just specifying th
 
 '''
 
-code_length_orders = [16, 17, 18, 0, 8, 7, 9, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15] # This is the order of the the bitlengths when decoding the code length sequences.
+# code_length_orders = [16, 17, 18, 0, 8, 7, 9, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15] # This is the order of the the bitlengths when decoding the code length sequences.
+
+code_length_orders = [16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15] # This should be correct maybe????
 
 def decode_trees(r) -> tuple: # This shit decodes the trees from the bitreader object r
 	HLIT = r.read_n_bits(5) + 257
@@ -68,9 +70,13 @@ def decode_trees(r) -> tuple: # This shit decodes the trees from the bitreader o
 	for i in range(HCLEN):
 		code_length_tree_bitlengths[code_length_orders[i]] = r.read_n_bits(3)
 
+	print("code_length_tree_bitlengths == "+str(code_length_tree_bitlengths))
+
 	# Construct the codelength tree. This will be used to actually get the codelengths.
 
 	code_length_tree = bitlengths_to_tree(code_length_tree_bitlengths, [x for x in range(19)])
+
+	print("Here is the code length tree: "+str(code_length_tree))
 
 	# Read literal/length + distance code length list, this will take advantage of the previously generated code_length_tree .
 
@@ -90,6 +96,7 @@ def decode_trees(r) -> tuple: # This shit decodes the trees from the bitreader o
 
 	while len(bitlengths) < HLIT + HDIST: # Decode the literal/(length + distance) trees.
 		symbol = code_length_tree.read_symbol(r) # Read a symbol from the code length tree.
+		print("Decoding this symbol while decoding the trees: "+str(symbol))
 		if 0 <= symbol <= 15:
 			bitlengths.append(symbol)
 		elif symbol == 16: # This means to copy the previous code length 3 - 6 times.
@@ -106,6 +113,8 @@ def decode_trees(r) -> tuple: # This shit decodes the trees from the bitreader o
 			print("Invalid symbol when decoding length tree: "+str(symbol))
 			assert False
 
+	print("Here are the bitlengths when decoding the trees: "+str(bitlengths))
+
 	# Final tree construction. Now that we have the bitlengths, we can finally get our literal/(length + distance) trees and the distance tree
 	literal_length_distance_tree = bitlengths_to_tree(bitlengths[:HLIT], [x for x in range(286)]) # alphabet is to 0-285 inclusive
 	distances_tree = bitlengths_to_tree(bitlengths[HLIT:], [x for x in range(30)]) # this is the tree used to decode the backwards distances.
@@ -120,6 +129,16 @@ backwards_distance_extra_bits = [0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6,
 
 backwards_distance_bases = [1, 2, 3, 4, 5, 7, 9, 13, 17, 25, 33, 49, 65, 97, 129, 193, 257, 385, 513, 769, 1025, 1537, 2049, 3073, 4097, 6145, 8193, 12289, 16385, 24577]
 
+'''
+[0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13]
+
+
+
+
+[0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13]
+
+'''
+
 # Decodes a block from the bitstream with the given literal/length and distance trees.
 
 def lz77_decode_block(r: Bitreader, literal_length_tree: HuffmanTree, distance_tree: HuffmanTree, output: list) -> None: # The output is the list of bytes to output. This function modifies it in-place.
@@ -132,16 +151,22 @@ def lz77_decode_block(r: Bitreader, literal_length_tree: HuffmanTree, distance_t
 			return output # Return the final data
 		else: # The value encodes the length portion.
 			symbol = val - 257
-
+			print("length_bases[symbol] == "+str(length_bases[symbol]))
+			print("length_extra_bits[symbol] == "+str(length_extra_bits[symbol]))
 			# Now read the extra bits. and add it to the baselength to get the final length
 			final_length = r.read_n_bits(length_extra_bits[symbol]) + length_bases[symbol]
 			# Now read the distance amount in a similar fashion
-			distance_amount = distance_tree.read_symbol(r)
-			final_distance = r.read_n_bits(backwards_distance_extra_bits[symbol]) + backwards_distance_bases[symbol]
+			distance_symbol = distance_tree.read_symbol(r)
+			
+			print("backwards_distance_extra_bits[distance_symbol] == "+str(backwards_distance_extra_bits[distance_symbol]))
+			print("backwards_distance_bases[distance_symbol] == "+str(backwards_distance_bases[distance_symbol]))
+			final_distance = r.read_n_bits(backwards_distance_extra_bits[distance_symbol]) + backwards_distance_bases[distance_symbol]
 			# Now we have the final <length, distance> pair decoded from the bitstream. add to the output.
 			# Take advantage of pythons ability to access with negative indexes. Note that this works, because the index [-n] changes as we are appending to the list.
+			print("final_length == "+str(final_length))
+			print("final_distance == "+str(final_distance))
 			for _ in range(final_length):
-				print("final_distance == "+str(final_distance))
+				#print("final_distance == "+str(final_distance))
 				output.append(output[-1*final_distance])
 
 	return output # Return the final byte list.
